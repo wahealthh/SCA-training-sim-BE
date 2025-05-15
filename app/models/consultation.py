@@ -17,7 +17,7 @@ class Consultation(BaseModel, Base):
     patient_case_id: Mapped[int] = mapped_column(ForeignKey("patient_cases.id"), nullable=False)
     transcript: Mapped[str] = mapped_column(Text, nullable=False)
     overall_score: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
-    feedback: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    feedback: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
     is_shared: Mapped[bool] = mapped_column(Boolean, default=False)  
     
     # Store domain scores as JSON

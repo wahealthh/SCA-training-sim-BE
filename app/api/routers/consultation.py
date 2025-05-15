@@ -18,11 +18,16 @@ from loguru import logger
 router = APIRouter()
 
 
-@router.get("/generate-case", status_code=status.HTTP_200_OK) 
+@router.get("/generate_case", status_code=status.HTTP_200_OK) 
 async def api_generate_case(db: Session = Depends(load)):
     """Generate a new patient case for consultation"""
     try:
-        case_data = generate_case()
+        # case_data = generate_case()
+        case_data = {
+            "age": 30,
+            "presenting": "I have a headache",
+            "context": "I have a headache"
+        }
         
         # Store the case in the database
         new_case = PatientCase(
@@ -49,7 +54,7 @@ async def api_generate_case(db: Session = Depends(load)):
             },
         )
 
-@router.post("/score-consultation", status_code=status.HTTP_201_CREATED)  
+@router.post("/score_consultation", status_code=status.HTTP_201_CREATED)  
 async def api_score_consultation(request: ScoreRequest, db: Session = Depends(load)):
     """Score a completed consultation based on transcript and case details"""
     try:
@@ -285,7 +290,7 @@ async def unshare_consultation(consultation_id: int, db: Session = Depends(load)
             content={"error": str(e)}
         )
 
-@router.get("/shared-consultations")
+@router.get("/shared_consultations")
 async def get_shared_consultations(db: Session = Depends(load)):
     """Get all shared consultations for peer review"""
     try:
