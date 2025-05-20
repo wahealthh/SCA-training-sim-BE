@@ -9,7 +9,7 @@ from app.db.load import load
 from app.models.user import User
 from app.schema.user import CreateUser
 
-router = APIRouter()
+router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(

@@ -7,138 +7,16 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.services.consultation import generate_case, score_consultation
 from app.db.load import load
-from app.models.consultation import Case, ICE, BackgroundDetail, InformationDivulged, Consultation, PeerComment, DoctorInfo
-from app.schema.consultation import CommentRequest, CreateCaseRequest, ScoreRequest, CaseResponse
+from app.models.case import Case
+from app.models.consultation import Consultation, PeerComment
+from app.schema.consultation import CommentRequest, ScoreRequest
 from app.core.config import settings
 from loguru import logger
 
 # Configure logging
 # logger = logging.getLogger(__name__) # Old standard logging
 
-router = APIRouter()
-
-
-@router.get("/generate_case", status_code=status.HTTP_200_OK) 
-async def generate_case(db: Session = Depends(load)):
-    """Generate a new patient case for consultation"""
-    try:
-        # case_data = generate_case()
-        case_data = {
-            "name": "John Doe",
-            "age": 30,
-            "presenting": "I have a headache",
-            "context": "I have a headache"
-        }
-        
-        # Store the case in the database
-        new_case = Case(
-            case_number=case_data["name"],
-            patient_name=case_data["name"],
-            patient_age=case_data["age"],
-            presenting_complaint=case_data["presenting"],
-            notes=case_data["context"]
-        )
-        db.add(new_case)
-        db.commit()
-        db.refresh(new_case)
-        
-        doctor_info = DoctorInfo(
-            case_id=new_case.id,
-            name=case_data["name"],
-            age=case_data["age"],
-            past_medical_history="Patient reports occasional migraines since age 25",
-            current_medication="Paracetamol as needed",
-            context="Patient is a software engineer who works long hours on the computer"
-        )
-        db.add(doctor_info)
-        db.commit()
-        
-        return case_data
-    except Exception as e:
-        error_detail = str(e)
-        raise HTTPException(status_code=(
-                e.status_code
-                if hasattr(e, "status_code")
-                else status.HTTP_500_INTERNAL_SERVER_ERROR
-            ),
-            detail={
-                "message": "Failed to generate case",
-                "error": error_detail,
-            },
-        )
-
-
-@router.post("/create_case", status_code=status.HTTP_201_CREATED, response_model=CaseResponse)  
-async def create_case(request: CreateCaseRequest, db: Session = Depends(load)):
-    """Create a new patient case with ICE entries, background details, and information divulged"""
-    try:
-        # Create the main case record
-        new_case = Case(
-            case_number=request.case_number,
-            patient_name=request.patient_name,
-            patient_age=request.patient_age,
-            presenting_complaint=request.presenting_complaint,
-            notes=request.notes
-        )
-        db.add(new_case)
-        
-        # Commit to get the new case ID
-        db.commit()
-        db.refresh(new_case)
-        
-        # Create ICE entries
-        for ice_entry in request.ice_entries:
-            ice = ICE(
-                case_id=new_case.id,
-                ice_type=ice_entry.ice_type,
-                description=ice_entry.description
-            )
-            db.add(ice)
-        
-        # Create background details
-        for bg_detail in request.background_details:
-            detail = BackgroundDetail(
-                case_id=new_case.id,
-                detail=bg_detail.detail
-            )
-            db.add(detail)
-        
-        # Create information divulged entries
-        for info_divulged in request.information_divulged:
-            info = InformationDivulged(
-                case_id=new_case.id,
-                divulgence_type=info_divulged.divulgence_type,
-                description=info_divulged.description
-            )
-            db.add(info)
-            
-        # Create doctor info if provided
-        if request.doctor_info:
-            doctor_info = DoctorInfo(
-                case_id=new_case.id,
-                name=request.doctor_info.name,
-                age=request.doctor_info.age,
-                past_medical_history=request.doctor_info.past_medical_history,
-                current_medication=request.doctor_info.current_medication,
-                context=request.doctor_info.context
-            )
-            db.add(doctor_info)
-        
-        # Commit all changes in a single transaction
-        db.commit()
-        
-        # Refresh the case to load the relationships
-        db.refresh(new_case)
-        
-        return new_case
-    except Exception as e:
-        # Handle the rollback - note: need to check if db object has rollback method
-        if hasattr(db, 'rollback'):
-            db.rollback()
-        logger.exception(f"Error creating case: {str(e)}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
-
-
+router = APIRouter(prefix="/consultations", tags=["consultations"])
 
 
 @router.post("/score_consultation", status_code=status.HTTP_201_CREATED)  
@@ -334,7 +212,7 @@ async def get_vapi_call(call_id: str):
 
 
 # Peer collaboration API routes
-@router.post("/consultations/{consultation_id}/share")
+@router.post("/{consultation_id}/share")
 async def share_consultation(consultation_id: int, db: Session = Depends(load)):
     """Share a consultation for peer review"""
     try:
@@ -357,7 +235,7 @@ async def share_consultation(consultation_id: int, db: Session = Depends(load)):
             content={"error": str(e)}
         )
 
-@router.post("/consultations/{consultation_id}/unshare")
+@router.post("/{consultation_id}/unshare")
 async def unshare_consultation(consultation_id: int, db: Session = Depends(load)):
     """Unshare a consultation from peer review"""
     try:
@@ -415,7 +293,7 @@ async def get_shared_consultations(db: Session = Depends(load)):
         logger.error(f"Error retrieving shared consultations: {e}")
         return {"error": str(e)}, 500
 
-@router.post("/consultations/{consultation_id}/comments")
+@router.post("/{consultation_id}/comments")
 async def add_comment(consultation_id: int, comment_request: CommentRequest, db: Session = Depends(load)):
     """Add a comment to a shared consultation"""
     try:
@@ -456,7 +334,7 @@ async def add_comment(consultation_id: int, comment_request: CommentRequest, db:
             content={"error": str(e)}
         )
 
-@router.get("/consultations/{consultation_id}/comments")
+@router.get("/{consultation_id}/comments")
 async def get_comments(consultation_id: int, db: Session = Depends(load)):
     """Get all comments for a shared consultation"""
     try:
@@ -492,191 +370,3 @@ async def get_comments(consultation_id: int, db: Session = Depends(load)):
         )
 
 
-# Admin API Routes
-@router.get("/admin/stats")
-async def get_admin_stats(db: Session = Depends(load)):
-    """Get database statistics for admin dashboard"""
-    try:
-        user_count = db.query(User).count()
-        case_count = db.query(Case).count()
-        consultation_count = db.query(Consultation).count()
-        
-        return {
-            "user_count": user_count,
-            "case_count": case_count,
-            "consultation_count": consultation_count
-        }
-    except Exception as e:
-        logger.error(f"Error getting admin stats: {e}")
-        return {"error": str(e)}, 500
-
-@router.get("/admin/cases")
-async def get_admin_cases(db: Session = Depends(load)):
-    """Get recent patient cases for admin dashboard"""
-    try:
-        cases = db.query(Case).order_by(
-            Case.created_at.desc()
-        ).limit(10).all()
-        
-        return {
-            "cases": [
-                {
-                    "id": case.id,
-                    "case_number": case.case_number,
-                    "patient_name": case.patient_name,
-                    "patient_age": case.patient_age,
-                    "presenting_complaint": case.presenting_complaint,
-                    "created_at": case.created_at.isoformat()
-                }
-                for case in cases
-            ]
-        }
-    except Exception as e:
-        logger.error(f"Error getting admin cases: {e}")
-        return {"error": str(e)}, 500
-
-@router.get("/admin/consultations")
-async def get_admin_consultations(db: Session = Depends(load)):
-    """Get recent consultations for admin dashboard"""
-    try:
-        consultations = db.query(Consultation).join(
-            Case
-        ).order_by(
-            Consultation.created_at.desc()
-        ).limit(10).all()
-        
-        return {
-            "consultations": [
-                {
-                    "id": consultation.id,
-                    "case_id": consultation.case_id,
-                    "patient_name": consultation.case.patient_name,
-                    "patient_age": consultation.case.patient_age,
-                    "presenting_complaint": consultation.case.presenting_complaint,
-                    "overall_score": consultation.overall_score,
-                    "created_at": consultation.created_at.isoformat()
-                }
-                for consultation in consultations
-            ]
-        }
-    except Exception as e:
-        logger.error(f"Error getting admin consultations: {e}")
-        return {"error": str(e)}, 500
-
-@router.get("/admin/test-openai")
-async def test_openai_connection():
-    """Test OpenAI connection"""
-    try:
-        from openai import OpenAI
-        
-        client = OpenAI(api_key=os.environ.get("OPENAI_API_KEY"))
-        models = client.models.list()
-        
-        return {
-            "status": "success",
-            "model": "gpt-4o"
-        }
-    except Exception as e:
-        logger.error(f"Error testing OpenAI connection: {e}")
-        return {"error": str(e)}, 500
-
-@router.get("/admin/test-vapi")
-async def test_vapi_connection():
-    """Test Vapi connection"""
-    try:
-        # This is a simulation since we don't have direct Vapi API access in this context
-        assistant_id = settings.ASSISTANT_ID
-        
-        if not assistant_id or assistant_id == "unknown":
-            raise Exception("Assistant ID not configured")
-        
-        return {
-            "status": "success",
-            "assistant_id": assistant_id[:5] + "..." + assistant_id[-5:] if len(assistant_id) > 10 else assistant_id
-        }
-    except Exception as e:
-        logger.error(f"Error testing Vapi connection: {e}")
-        return {"error": str(e)}, 500
-
-@router.get("/cases", status_code=status.HTTP_200_OK)
-async def get_cases(db: Session = Depends(load)):
-    """Get all patient cases"""
-    try:
-        cases = db.query(Case).order_by(Case.created_at.desc()).all()
-        
-        result = []
-        for case in cases:
-            case_data = {
-                "id": case.id,
-                "case_number": case.case_number,
-                "patient_name": case.patient_name,
-                "patient_age": case.patient_age,
-                "presenting_complaint": case.presenting_complaint,
-                "notes": case.notes,
-                "created_at": case.created_at.isoformat(),
-            }
-            
-                
-            result.append(case_data)
-        
-        return {"cases": result}
-    except Exception as e:
-        logger.error(f"Error retrieving cases: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-
-@router.get("/cases/{case_id}", status_code=status.HTTP_200_OK, response_model=CaseResponse)
-async def get_case(case_id: str, db: Session = Depends(load)):
-    """Get a specific patient case by ID with all related data"""
-    try:
-        case = db.query(Case).filter_by(id=case_id).first()
-        
-        if not case:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Case with ID {case_id} not found"
-            )
-            
-        return case
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error retrieving case {case_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )
-
-@router.get("/cases/{case_id}/doctor_info", status_code=status.HTTP_200_OK)
-async def get_doctor_info(case_id: str, db: Session = Depends(load)):
-    """Get doctor information for a specific case"""
-    try:
-        doctor_info = db.query(DoctorInfo).filter_by(case_id=case_id).first()
-        
-        if not doctor_info:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail=f"Doctor information for case {case_id} not found"
-            )
-            
-        return {
-            "id": doctor_info.id,
-            "case_id": doctor_info.case_id,
-            "name": doctor_info.name,
-            "age": doctor_info.age,
-            "past_medical_history": doctor_info.past_medical_history,
-            "current_medication": doctor_info.current_medication,
-            "context": doctor_info.context,
-           
-        }
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error retrieving doctor info for case {case_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=str(e)
-        )

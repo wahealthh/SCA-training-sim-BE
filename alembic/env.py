@@ -11,11 +11,11 @@ from app.models.base_model import Base
 from app.models.user import User
 from app.models.consultation import Consultation
 from app.models.consultation import PeerComment
-from app.models.consultation import Case
-from app.models.consultation import ICE
-from app.models.consultation import BackgroundDetail
-from app.models.consultation import InformationDivulged
-from app.models.consultation import DoctorInfo
+from app.models.case import Case
+from app.models.case import ICE
+from app.models.case import BackgroundDetail
+from app.models.case import InformationDivulged
+from app.models.case import DoctorInfo
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
