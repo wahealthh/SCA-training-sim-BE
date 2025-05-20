@@ -17,4 +17,5 @@ dependencies = [
     "pydantic-settings>=2.2.1",
     "python-jose>=3.3.0",
     "passlib>=1.7.4",
+    "loguru>=0.7.3",
 ]
