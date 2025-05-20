@@ -7,8 +7,8 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.services.consultation import generate_case, score_consultation
 from app.db.load import load
-from app.models.consultation import Consultation, PatientCase, PeerComment
-from app.schema.consultation import CommentRequest, ScoreRequest
+from app.models.consultation import Case, ICE, BackgroundDetail, InformationDivulged, Consultation, PeerComment
+from app.schema.consultation import CommentRequest, CreateCaseRequest, ScoreRequest, CaseResponse
 from app.core.config import settings
 from loguru import logger
 
@@ -19,21 +19,24 @@ router = APIRouter()
 
 
 @router.get("/generate_case", status_code=status.HTTP_200_OK) 
-async def api_generate_case(db: Session = Depends(load)):
+async def generate_case(db: Session = Depends(load)):
     """Generate a new patient case for consultation"""
     try:
         # case_data = generate_case()
         case_data = {
+            "name": "John Doe",
             "age": 30,
             "presenting": "I have a headache",
             "context": "I have a headache"
         }
         
         # Store the case in the database
-        new_case = PatientCase(
-            age=case_data["age"],
-            presenting=case_data["presenting"],
-            context=case_data["context"]
+        new_case = Case(
+            case_number=case_data["name"],
+            patient_name=case_data["name"],
+            patient_age=case_data["age"],
+            presenting_complaint=case_data["presenting"],
+            notes=case_data["context"]
         )
         db.add(new_case)
         db.commit()
@@ -50,28 +53,90 @@ async def api_generate_case(db: Session = Depends(load)):
             detail={
                 "message": "Failed to generate case",
                 "error": error_detail,
-                "case": new_case.model_dump(),
             },
         )
 
+
+@router.post("/create_case", status_code=status.HTTP_201_CREATED, response_model=CaseResponse)  
+async def create_case(request: CreateCaseRequest, db: Session = Depends(load)):
+    """Create a new patient case with ICE entries, background details, and information divulged"""
+    try:
+        # Create the main case record
+        new_case = Case(
+            case_number=request.case_number,
+            patient_name=request.patient_name,
+            patient_age=request.patient_age,
+            presenting_complaint=request.presenting_complaint,
+            notes=request.notes
+        )
+        db.add(new_case)
+        
+        # Commit to get the new case ID
+        db.commit()
+        db.refresh(new_case)
+        
+        # Create ICE entries
+        for ice_entry in request.ice_entries:
+            ice = ICE(
+                case_id=new_case.id,
+                ice_type=ice_entry.ice_type,
+                description=ice_entry.description
+            )
+            db.add(ice)
+        
+        # Create background details
+        for bg_detail in request.background_details:
+            detail = BackgroundDetail(
+                case_id=new_case.id,
+                detail=bg_detail.detail
+            )
+            db.add(detail)
+        
+        # Create information divulged entries
+        for info_divulged in request.information_divulged:
+            info = InformationDivulged(
+                case_id=new_case.id,
+                divulgence_type=info_divulged.divulgence_type,
+                description=info_divulged.description
+            )
+            db.add(info)
+        
+        # Commit all changes in a single transaction
+        db.commit()
+        
+        # Refresh the case to load the relationships
+        db.refresh(new_case)
+        
+        return new_case
+    except Exception as e:
+        # Handle the rollback - note: need to check if db object has rollback method
+        if hasattr(db, 'rollback'):
+            db.rollback()
+        logger.exception(f"Error creating case: {str(e)}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+
+
+
+
 @router.post("/score_consultation", status_code=status.HTTP_201_CREATED)  
-async def api_score_consultation(request: ScoreRequest, db: Session = Depends(load)):
+async def score_consultation(request: ScoreRequest, db: Session = Depends(load)):
     """Score a completed consultation based on transcript and case details"""
     try:
         scores = score_consultation(request.transcript, request.case_details)
         
-        # Find or create the patient case
-        case = db.query(PatientCase).filter_by(
-            age=request.case_details.age,
-            presenting=request.case_details.presenting
+        # Find or create the case
+        case = db.query(Case).filter_by(
+            case_number=request.case_details.case_number
         ).first()
         
         if not case:
             # If case doesn't exist, create it
-            case = PatientCase(
-                age=request.case_details.age,
-                presenting=request.case_details.presenting,
-                context=request.case_details.context
+            case = Case(
+                case_number=request.case_details.case_number,
+                patient_name=request.case_details.patient_name,
+                patient_age=request.case_details.patient_age,
+                presenting_complaint=request.case_details.presenting_complaint,
+                notes=request.case_details.notes
             )
             db.add(case)
             db.commit()
@@ -80,7 +145,7 @@ async def api_score_consultation(request: ScoreRequest, db: Session = Depends(lo
         # Store the consultation record
         consultation = Consultation(
             user_id=request.user_id,
-            patient_case_id=case.id,
+            case_id=case.id,
             transcript=request.transcript,
             overall_score=scores["overall_score"],
             feedback=scores["feedback"],
@@ -106,9 +171,9 @@ async def api_score_consultation(request: ScoreRequest, db: Session = Depends(lo
 async def get_history(db: Session = Depends(load)):
     """Get history of consultation scores"""
     try:
-        # Query all consultations with their associated patient cases
+        # Query all consultations with their associated cases
         consultations = db.query(Consultation).join(
-            PatientCase
+            Case
         ).order_by(Consultation.created_at.desc()).all()
         
         history = []
@@ -124,9 +189,11 @@ async def get_history(db: Session = Depends(load)):
                 "id": consultation.id,
                 "timestamp": consultation.created_at.isoformat(),
                 "case_details": {
-                    "age": consultation.patient_case.age,
-                    "presenting": consultation.patient_case.presenting,
-                    "context": consultation.patient_case.context
+                    "case_number": consultation.case.case_number,
+                    "patient_name": consultation.case.patient_name,
+                    "patient_age": consultation.case.patient_age,
+                    "presenting_complaint": consultation.case.presenting_complaint,
+                    "notes": consultation.case.notes
                 },
                 "scores": consultation.domain_scores,
                 "overall_score": consultation.overall_score,
@@ -295,7 +362,7 @@ async def get_shared_consultations(db: Session = Depends(load)):
     """Get all shared consultations for peer review"""
     try:
         consultations = db.query(Consultation).filter_by(is_shared=True).join(
-            PatientCase
+            Case
         ).order_by(Consultation.created_at.desc()).all()
         
         shared = []
@@ -306,9 +373,11 @@ async def get_shared_consultations(db: Session = Depends(load)):
                 "id": consultation.id,
                 "timestamp": consultation.created_at.isoformat(),
                 "case_details": {
-                    "age": consultation.patient_case.age,
-                    "presenting": consultation.patient_case.presenting,
-                    "context": consultation.patient_case.context
+                    "case_number": consultation.case.case_number,
+                    "patient_name": consultation.case.patient_name,
+                    "patient_age": consultation.case.patient_age,
+                    "presenting_complaint": consultation.case.presenting_complaint,
+                    "notes": consultation.case.notes
                 },
                 "scores": consultation.domain_scores,
                 "overall_score": consultation.overall_score,
@@ -406,7 +475,7 @@ async def get_admin_stats(db: Session = Depends(load)):
     """Get database statistics for admin dashboard"""
     try:
         user_count = db.query(User).count()
-        case_count = db.query(PatientCase).count()
+        case_count = db.query(Case).count()
         consultation_count = db.query(Consultation).count()
         
         return {
@@ -422,17 +491,18 @@ async def get_admin_stats(db: Session = Depends(load)):
 async def get_admin_cases(db: Session = Depends(load)):
     """Get recent patient cases for admin dashboard"""
     try:
-        cases = db.query(PatientCase).order_by(
-            PatientCase.created_at.desc()
+        cases = db.query(Case).order_by(
+            Case.created_at.desc()
         ).limit(10).all()
         
         return {
             "cases": [
                 {
                     "id": case.id,
-                    "age": case.age,
-                    "presenting": case.presenting,
-                    "context": case.context,
+                    "case_number": case.case_number,
+                    "patient_name": case.patient_name,
+                    "patient_age": case.patient_age,
+                    "presenting_complaint": case.presenting_complaint,
                     "created_at": case.created_at.isoformat()
                 }
                 for case in cases
@@ -447,7 +517,7 @@ async def get_admin_consultations(db: Session = Depends(load)):
     """Get recent consultations for admin dashboard"""
     try:
         consultations = db.query(Consultation).join(
-            PatientCase
+            Case
         ).order_by(
             Consultation.created_at.desc()
         ).limit(10).all()
@@ -456,8 +526,10 @@ async def get_admin_consultations(db: Session = Depends(load)):
             "consultations": [
                 {
                     "id": consultation.id,
-                    "patient_case_id": consultation.patient_case_id,
-                    "patient_presenting": consultation.patient_case.presenting,
+                    "case_id": consultation.case_id,
+                    "patient_name": consultation.case.patient_name,
+                    "patient_age": consultation.case.patient_age,
+                    "presenting_complaint": consultation.case.presenting_complaint,
                     "overall_score": consultation.overall_score,
                     "created_at": consultation.created_at.isoformat()
                 }

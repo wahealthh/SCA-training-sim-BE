@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.logging_config import setup_logging
 from app.db.load import load
 from app.models.user import User
-from app.models.consultation import Consultation, PatientCase
+from app.models.consultation import Consultation, Case, ICE, BackgroundDetail, InformationDivulged, ICEType, DivulgenceType
 
 # Set up logging
 logger = setup_logging()
@@ -48,48 +48,90 @@ def create_test_cases(db: Session):
     """Create test patient cases"""
     logger.info("Creating test patient cases...")
     cases = [
-        PatientCase(
-            age=45,
-            presenting="The patient has been experiencing increasing shortness of breath over the past month, particularly when climbing stairs.",
-            context="Patient has a history of smoking 20 cigarettes daily for 25 years. No prior respiratory conditions diagnosed. Family history of COPD."
+        Case(
+            case_number="CASE-001",
+            patient_name="John Smith",
+            patient_age=45,
+            presenting_complaint="The patient has been experiencing increasing shortness of breath over the past month, particularly when climbing stairs.",
+            notes="Patient has a history of smoking 20 cigarettes daily for 25 years. No prior respiratory conditions diagnosed. Family history of COPD."
         ),
-        PatientCase(
-            age=62,
-            presenting="The patient reports persistent joint pain in both knees that has been worsening over the past year.",
-            context="Patient is overweight with a BMI of 32. Previously active but has reduced exercise due to pain. Has been self-medicating with over-the-counter pain relievers."
+        Case(
+            case_number="CASE-002",
+            patient_name="Sarah Johnson",
+            patient_age=62,
+            presenting_complaint="The patient reports persistent joint pain in both knees that has been worsening over the past year.",
+            notes="Patient is overweight with a BMI of 32. Previously active but has reduced exercise due to pain. Has been self-medicating with over-the-counter pain relievers."
         ),
-        PatientCase(
-            age=36,
-            presenting="The patient has been experiencing recurring headaches, typically in the afternoon, for the past three weeks.",
-            context="Works long hours at a computer. Reports increased stress at work. No prior history of chronic headaches. Vision was last checked two years ago."
+        Case(
+            case_number="CASE-003",
+            patient_name="Michael Chen",
+            patient_age=36,
+            presenting_complaint="The patient has been experiencing recurring headaches, typically in the afternoon, for the past three weeks.",
+            notes="Works long hours at a computer. Reports increased stress at work. No prior history of chronic headaches. Vision was last checked two years ago."
         ),
-        PatientCase(
-            age=58,
-            presenting="The patient has noticed a gradually enlarging lump on the left side of their neck over the past two months.",
-            context="Non-smoker. No recent infections. No fever or night sweats. Previously healthy with well-controlled hypertension."
+        Case(
+            case_number="CASE-004",
+            patient_name="Emily Rodriguez",
+            patient_age=58,
+            presenting_complaint="The patient has noticed a gradually enlarging lump on the left side of their neck over the past two months.",
+            notes="Non-smoker. No recent infections. No fever or night sweats. Previously healthy with well-controlled hypertension."
         ),
-        PatientCase(
-            age=29,
-            presenting="The patient reports severe abdominal pain that started suddenly four hours ago.",
-            context="No previous abdominal surgeries. Last meal was 6 hours ago. Pain is concentrated in the right lower quadrant. No nausea or vomiting."
+        Case(
+            case_number="CASE-005",
+            patient_name="David Kim",
+            patient_age=29,
+            presenting_complaint="The patient reports severe abdominal pain that started suddenly four hours ago.",
+            notes="No previous abdominal surgeries. Last meal was 6 hours ago. Pain is concentrated in the right lower quadrant. No nausea or vomiting."
         ),
     ]
     
     for case in cases:
         # Check if a similar case already exists
-        existing_case = db.query(PatientCase).filter_by(
-            age=case.age, 
-            presenting=case.presenting
+        existing_case = db.query(Case).filter_by(
+            case_number=case.case_number
         ).first()
         
         if not existing_case:
             db.add(case)
+            db.flush()  # Flush to get the ID
+            
+            # Add some sample ICE entries
+            db.add(ICE(
+                case_id=case.id,
+                ice_type=ICEType.IDEA,
+                description="Patient thinks they might have a serious condition."
+            ))
+            
+            db.add(ICE(
+                case_id=case.id,
+                ice_type=ICEType.CONCERN,
+                description="Patient is worried about impact on daily activities."
+            ))
+            
+            # Add background details
+            db.add(BackgroundDetail(
+                case_id=case.id,
+                detail="Patient has a family history of similar conditions."
+            ))
+            
+            # Add information divulged
+            db.add(InformationDivulged(
+                case_id=case.id,
+                divulgence_type=DivulgenceType.FREELY_DIVULGED,
+                description="Patient mentioned symptoms without prompting."
+            ))
+            
+            db.add(InformationDivulged(
+                case_id=case.id,
+                divulgence_type=DivulgenceType.SPECIFICALLY_ASKED,
+                description="Patient revealed medication history only when directly asked."
+            ))
     
     # Commit to ensure all cases are saved
     db.commit()
     
     # Get cases from database to ensure we have their correct IDs
-    db_cases = db.query(PatientCase).all()
+    db_cases = db.query(Case).all()
     
     if not db_cases:
         logger.error("No patient cases were created or found in the database")
@@ -169,7 +211,7 @@ def create_test_consultations(db: Session, users, cases):
             logger.debug(f"Using case ID: {case.id}")
             
             # Select a random transcript or generate a placeholder
-            transcript = random.choice(sample_transcripts) if random.random() > 0.5 else f"[Consultation transcript for case regarding {case.presenting[:30]}...]"
+            transcript = random.choice(sample_transcripts) if random.random() > 0.5 else f"[Consultation transcript for case regarding {case.presenting_complaint[:30]}...]"
             
             # Generate random scores
             overall_score = random.uniform(50.0, 95.0)
@@ -196,7 +238,7 @@ def create_test_consultations(db: Session, users, cases):
             # Create consultation with is_shared set to a random boolean value
             consultation = Consultation(
                 user_id=user_id,
-                patient_case_id=case.id,
+                case_id=case.id,
                 transcript=transcript,
                 overall_score=overall_score,
                 domain_scores=domain_scores,

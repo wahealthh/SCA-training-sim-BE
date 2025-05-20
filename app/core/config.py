@@ -1,6 +1,6 @@
 from pydantic import Field
 from pydantic_settings import BaseSettings
-from typing import List
+from typing import List, Optional
 
 
 class Settings(BaseSettings):
@@ -25,6 +25,8 @@ class Settings(BaseSettings):
     DB_HOST: str = Field(..., env="DB_HOST")
     DB_PORT: str = Field(..., env="DB_PORT")
     DB_SSLMODE: str = Field("prefer", env="DB_SSLMODE")
+    
+    
     # VAPI settings
     ASSISTANT_ID: str = Field(..., env="ASSISTANT_ID")
     VAPI_API_KEY: str = Field(..., env="VAPI_API_KEY")

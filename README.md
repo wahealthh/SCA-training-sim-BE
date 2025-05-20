@@ -1,78 +1,77 @@
-# SCA Simulator Backend API
+# SCA Training Simulator Backend
 
-The backend API server for the SCA Simulator application, a voice-based clinical consultation simulator for GP trainees. This repository provides the server-side functionality, database management, and AI integration for the application.
+This is the backend API for the SCA Training Simulator application.
 
 ## Features
 
-- RESTful API for consultation simulations
-- AI-powered patient case generation using GPT models
-- Consultation transcript analysis and scoring
-- PostgreSQL database integration for user data and history
-- RCGP rubric-based assessment engine
+- FastAPI REST API
+- PostgreSQL database with SQLAlchemy ORM
+- JWT authentication
+- User management
+- OpenAI integration
 
-## Technologies
+## Project Structure
 
-- Python 3.9+
-- FastAPI web framework
-- SQLAlchemy ORM
-- PostgreSQL database
-- OpenAI integration for AI patients
-- Pydantic for data validation
+```
+.
+├── app                  # Application package
+│   ├── api              # API-related modules
+│   │   └── deps.py      # Dependencies (JWT, auth)
+│   ├── core             # Core modules
+│   │   └── config.py    # Application settings
+│   ├── db               # Database modules
+│   │   ├── engine.py    # DB connection
+│   │   └── init_db.py   # DB initialization
+│   ├── models           # SQLAlchemy models
+│   │   └── user.py      # User model
+│   ├── routers          # API endpoints
+│   │   ├── __init__.py  # Router registration
+│   │   ├── auth.py      # Auth endpoints
+│   │   └── users.py     # User endpoints
+│   ├── schemas          # Pydantic schemas
+│   │   └── user.py      # User schemas
+│   └── utils            # Utility functions
+│       ├── openai.py    # OpenAI utilities
+│       └── users.py     # User utilities
+├── scripts              # Scripts
+│   └── init_db.py       # Initialize DB
+├── .env                 # Environment variables
+├── .env.example         # Example env vars
+├── main.py              # Application entry point
+├── pyproject.toml       # Python dependencies
+└── README.md            # This file
+```
 
 ## Getting Started
 
-### Prerequisites
+1. Clone the repository
+2. Create a virtual environment
+3. Install dependencies:
 
-- Python 3.12+
-- PostgreSQL database
-- OpenAI API key
-- Vapi API key (for voice functionality)
-
-### Installation
-
-1. Clone this repository
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-3. Configure environment:
-   ```
-   cp .env.example .env
-   # Edit .env with your database URL and API keys
-   ```
-
-### Development
-
-Run the development server:
-
-```
-python main.py
+```bash
+pip install .
 ```
 
-Or with uvicorn directly:
+4. Create a `.env` file based on `.env.example` and configure environment variables
+5. Run database migrations:
 
+```bash
+python scripts/init_db.py
 ```
-uvicorn main:app --reload --host 0.0.0.0 --port 3000
+
+6. Start the development server:
+
+```bash
+uvicorn main:app --reload
 ```
 
-The API will be available at http://localhost:3000.
+7. Visit the API documentation at http://localhost:8000/docs
 
-### Database Setup
+## API Routes
 
-1. Ensure PostgreSQL is running
-2. Set the `DATABASE_URL` in your `.env` file
-3. The database schema will be automatically created on first run
-
-## API Documentation
-
-Once the server is running, view the interactive API documentation at:
-
-- http://localhost:3000/docs (Swagger UI)
-- http://localhost:3000/redoc (ReDoc)
-
-## Key Endpoints
-
-- `GET /api/generate-case` - Generate a new patient case
-- `POST /api/score` - Score a consultation based on transcript
-- `GET /api/history` - Get consultation history
-- Static endpoints for serving frontend files
+- `GET /api/v1/users/` - List all users
+- `POST /api/v1/users/` - Create a new user
+- `GET /api/v1/users/{user_id}` - Get a user by ID
+- `PUT /api/v1/users/{user_id}` - Update a user
+- `DELETE /api/v1/users/{user_id}` - Delete a user
+- `POST /api/v1/auth/login` - Login and get JWT token

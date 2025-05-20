@@ -9,7 +9,7 @@ from typing import Optional, Union, Any
 from app.core.config import settings
 from app.db.engine import get_db
 from app.models.user import User
-from app.schema.user import UserInDB
+from app.schemas.user import UserInDB
 from app.utils.users import get_user_by_email
 
 # Define OAuth2 password bearer

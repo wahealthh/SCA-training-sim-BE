@@ -17,14 +17,10 @@ contains:
 import uuid
 
 from datetime import datetime
-from sqlalchemy import String, DateTime
-from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Column, Integer, DateTime
+from sqlalchemy.ext.declarative import declarative_base
 
-
-class Base(DeclarativeBase):
-    pass
-
+Base = declarative_base()
 
 class BaseModel:
     """
@@ -32,15 +28,9 @@ class BaseModel:
     for other classes that would inherit it.
     """
 
-    id: Mapped[str] = mapped_column(
-        String(36), unique=True, nullable=False, primary_key=True
-    )
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=(datetime.utcnow())
-    )
-    updated_at: Mapped[datetime] = mapped_column(
-        DateTime, nullable=False, default=(datetime.utcnow())
-    )
+    id = Column(Integer, primary_key=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     def __init__(self, *args, **kwargs):
         """
