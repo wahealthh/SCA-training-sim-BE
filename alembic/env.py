@@ -15,6 +15,7 @@ from app.models.consultation import Case
 from app.models.consultation import ICE
 from app.models.consultation import BackgroundDetail
 from app.models.consultation import InformationDivulged
+from app.models.consultation import DoctorInfo
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

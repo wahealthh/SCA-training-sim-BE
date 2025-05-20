@@ -22,6 +22,14 @@ class InformationDivulgedCreate(BaseModel):
     description: str
 
 
+class DoctorInfoCreate(BaseModel):
+    name: str
+    age: Optional[int] = None
+    past_medical_history: Optional[str] = None
+    current_medication: Optional[str] = None
+    context: Optional[str] = None
+
+
 class CreateCaseRequest(BaseModel):
     case_number: str
     patient_name: Optional[str] = None
@@ -31,6 +39,7 @@ class CreateCaseRequest(BaseModel):
     ice_entries: List[ICECreate] = []
     background_details: List[BackgroundDetailCreate] = []
     information_divulged: List[InformationDivulgedCreate] = []
+    doctor_info: Optional[DoctorInfoCreate] = None
 
     class Config:
         orm_mode = True
@@ -68,6 +77,16 @@ class InformationDivulgedResponse(InformationDivulgedCreate):
         orm_mode = True
 
 
+class DoctorInfoResponse(DoctorInfoCreate):
+    id: str
+    case_id: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+
 class CaseResponse(BaseModel):
     id: str
     case_number: str
@@ -78,6 +97,7 @@ class CaseResponse(BaseModel):
     ice_entries: List[ICEResponse] = []
     background_details: List[BackgroundDetailResponse] = []
     information_divulged: List[InformationDivulgedResponse] = []
+    doctor_info: Optional[DoctorInfoResponse] = None
 
     class Config:
         orm_mode = True

@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from app.models.user import User
 from app.services.consultation import generate_case, score_consultation
 from app.db.load import load
-from app.models.consultation import Case, ICE, BackgroundDetail, InformationDivulged, Consultation, PeerComment
+from app.models.consultation import Case, ICE, BackgroundDetail, InformationDivulged, Consultation, PeerComment, DoctorInfo
 from app.schema.consultation import CommentRequest, CreateCaseRequest, ScoreRequest, CaseResponse
 from app.core.config import settings
 from loguru import logger
@@ -41,6 +41,17 @@ async def generate_case(db: Session = Depends(load)):
         db.add(new_case)
         db.commit()
         db.refresh(new_case)
+        
+        doctor_info = DoctorInfo(
+            case_id=new_case.id,
+            name=case_data["name"],
+            age=case_data["age"],
+            past_medical_history="Patient reports occasional migraines since age 25",
+            current_medication="Paracetamol as needed",
+            context="Patient is a software engineer who works long hours on the computer"
+        )
+        db.add(doctor_info)
+        db.commit()
         
         return case_data
     except Exception as e:
@@ -100,6 +111,18 @@ async def create_case(request: CreateCaseRequest, db: Session = Depends(load)):
                 description=info_divulged.description
             )
             db.add(info)
+            
+        # Create doctor info if provided
+        if request.doctor_info:
+            doctor_info = DoctorInfo(
+                case_id=new_case.id,
+                name=request.doctor_info.name,
+                age=request.doctor_info.age,
+                past_medical_history=request.doctor_info.past_medical_history,
+                current_medication=request.doctor_info.current_medication,
+                context=request.doctor_info.context
+            )
+            db.add(doctor_info)
         
         # Commit all changes in a single transaction
         db.commit()
@@ -574,3 +597,86 @@ async def test_vapi_connection():
     except Exception as e:
         logger.error(f"Error testing Vapi connection: {e}")
         return {"error": str(e)}, 500
+
+@router.get("/cases", status_code=status.HTTP_200_OK)
+async def get_cases(db: Session = Depends(load)):
+    """Get all patient cases"""
+    try:
+        cases = db.query(Case).order_by(Case.created_at.desc()).all()
+        
+        result = []
+        for case in cases:
+            case_data = {
+                "id": case.id,
+                "case_number": case.case_number,
+                "patient_name": case.patient_name,
+                "patient_age": case.patient_age,
+                "presenting_complaint": case.presenting_complaint,
+                "notes": case.notes,
+                "created_at": case.created_at.isoformat(),
+            }
+            
+                
+            result.append(case_data)
+        
+        return {"cases": result}
+    except Exception as e:
+        logger.error(f"Error retrieving cases: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+
+@router.get("/cases/{case_id}", status_code=status.HTTP_200_OK, response_model=CaseResponse)
+async def get_case(case_id: str, db: Session = Depends(load)):
+    """Get a specific patient case by ID with all related data"""
+    try:
+        case = db.query(Case).filter_by(id=case_id).first()
+        
+        if not case:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Case with ID {case_id} not found"
+            )
+            
+        return case
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving case {case_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )
+
+@router.get("/cases/{case_id}/doctor_info", status_code=status.HTTP_200_OK)
+async def get_doctor_info(case_id: str, db: Session = Depends(load)):
+    """Get doctor information for a specific case"""
+    try:
+        doctor_info = db.query(DoctorInfo).filter_by(case_id=case_id).first()
+        
+        if not doctor_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Doctor information for case {case_id} not found"
+            )
+            
+        return {
+            "id": doctor_info.id,
+            "case_id": doctor_info.case_id,
+            "name": doctor_info.name,
+            "age": doctor_info.age,
+            "past_medical_history": doctor_info.past_medical_history,
+            "current_medication": doctor_info.current_medication,
+            "context": doctor_info.context,
+           
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error retrieving doctor info for case {case_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=str(e)
+        )

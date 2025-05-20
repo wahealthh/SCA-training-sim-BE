@@ -17,7 +17,7 @@ contains:
 import uuid
 
 from datetime import datetime
-from sqlalchemy import Column, Integer, DateTime
+from sqlalchemy import Column, Integer, DateTime, String
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -28,7 +28,7 @@ class BaseModel:
     for other classes that would inherit it.
     """
 
-    id = Column(Integer, primary_key=True)
+    id = Column(String(36), primary_key=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 

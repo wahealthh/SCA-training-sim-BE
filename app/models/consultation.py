@@ -35,9 +35,30 @@ class Case(BaseModel, Base):
     background_details = relationship("BackgroundDetail", back_populates="case", cascade="all, delete-orphan")
     information_divulged = relationship("InformationDivulged", back_populates="case", cascade="all, delete-orphan")
     consultations = relationship("Consultation", back_populates="case")
+    doctor_info = relationship("DoctorInfo", back_populates="case", uselist=False, cascade="all, delete-orphan")
     
     def __repr__(self):
         return f"<Case(id={self.id}, case_number='{self.case_number}')>"
+
+
+class DoctorInfo(BaseModel, Base):
+    """
+    Doctor information related to a case
+    """
+    __tablename__ = 'doctor_info'
+    
+    case_id = Column(String(36), ForeignKey('cases.id', ondelete='CASCADE'), nullable=False, unique=True)
+    name = Column(String(255), nullable=False)
+    age = Column(Integer, nullable=True)
+    past_medical_history = Column(Text, nullable=True)
+    current_medication = Column(Text, nullable=True)
+    context = Column(Text, nullable=True)
+    
+    # Relationships
+    case = relationship("Case", back_populates="doctor_info")
+    
+    def __repr__(self):
+        return f"<DoctorInfo(id={self.id}, name='{self.name}')>"
 
 
 class ICE(BaseModel, Base):

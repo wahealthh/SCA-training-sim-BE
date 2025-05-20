@@ -16,7 +16,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from app.core.logging_config import setup_logging
 from app.db.load import load
 from app.models.user import User
-from app.models.consultation import Consultation, Case, ICE, BackgroundDetail, InformationDivulged, ICEType, DivulgenceType
+from app.models.consultation import Consultation, Case, ICE, BackgroundDetail, InformationDivulged, ICEType, DivulgenceType, DoctorInfo
 
 # Set up logging
 logger = setup_logging()
@@ -85,7 +85,31 @@ def create_test_cases(db: Session):
         ),
     ]
     
-    for case in cases:
+    # Sample doctor information
+    doctor_names = ["Dr. Michael Brown", "Dr. Sarah Wilson", "Dr. James Thompson", "Dr. Lisa Garcia", "Dr. Robert Chen"]
+    medical_histories = [
+        "No significant past medical history",
+        "Treated for hypertension for 5 years",
+        "History of anxiety disorder, well controlled",
+        "Type 2 diabetes diagnosed 3 years ago",
+        "Previous appendectomy 10 years ago"
+    ]
+    medications = [
+        "No regular medications",
+        "Lisinopril 10mg daily",
+        "Metformin 500mg twice daily",
+        "Sertraline 50mg daily",
+        "Atorvastatin 20mg at night"
+    ]
+    contexts = [
+        "General practice physician with 10 years experience",
+        "Recently qualified GP, special interest in respiratory medicine",
+        "Family physician with interest in psychiatric conditions",
+        "GP with additional training in geriatric medicine",
+        "Family doctor focusing on preventative care"
+    ]
+    
+    for i, case in enumerate(cases):
         # Check if a similar case already exists
         existing_case = db.query(Case).filter_by(
             case_number=case.case_number
@@ -94,6 +118,17 @@ def create_test_cases(db: Session):
         if not existing_case:
             db.add(case)
             db.flush()  # Flush to get the ID
+            
+            # Add doctor information
+            doctor_info = DoctorInfo(
+                case_id=case.id,
+                name=doctor_names[i % len(doctor_names)],
+                age=random.randint(30, 65),
+                past_medical_history=medical_histories[i % len(medical_histories)],
+                current_medication=medications[i % len(medications)],
+                context=contexts[i % len(contexts)]
+            )
+            db.add(doctor_info)
             
             # Add some sample ICE entries
             db.add(ICE(
