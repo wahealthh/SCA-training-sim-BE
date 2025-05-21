@@ -79,7 +79,7 @@ class BackgroundDetail(BaseModel, Base):
     """
     Background information for a case
     """
-    __tablename__ = 'background_information'
+    __tablename__ = 'background_details'
     
     case_id = Column(String(36), ForeignKey('cases.id', ondelete='CASCADE'), nullable=False)
     detail = Column(Text, nullable=False)
