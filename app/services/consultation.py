@@ -68,9 +68,9 @@ You are an expert medical consultant evaluator who specializes in assessing GP t
 You will be scoring a consultation based on the Royal College of General Practitioners (RCGP) assessment framework.
 
 Here is the case that the GP trainee was presented with:
-Age: {case_details.age}
-Presenting Complaint: {case_details.presenting}
-Context: {case_details.context}
+Age: {case_details.patient_age}
+Presenting Complaint: {case_details.presenting_complaint}
+Context: {case_details.notes}
 
 Here is the transcript of the consultation:
 {transcript}

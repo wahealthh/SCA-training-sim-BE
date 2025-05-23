@@ -13,14 +13,12 @@ from app.schema.consultation import CommentRequest, ScoreRequest
 from app.core.config import settings
 from loguru import logger
 
-# Configure logging
-# logger = logging.getLogger(__name__) # Old standard logging
 
 router = APIRouter(prefix="/consultations", tags=["consultations"])
 
 
 @router.post("/score_consultation", status_code=status.HTTP_201_CREATED)  
-async def score_consultation(request: ScoreRequest, db: Session = Depends(load)):
+async def score_consultation_route(request: ScoreRequest, db: Session = Depends(load)):
     """Score a completed consultation based on transcript and case details"""
     try:
         scores = score_consultation(request.transcript, request.case_details)
@@ -43,7 +41,6 @@ async def score_consultation(request: ScoreRequest, db: Session = Depends(load))
             db.commit()
             db.refresh(case)
         
-        # Store the consultation record
         consultation = Consultation(
             user_id=request.user_id,
             case_id=case.id,
@@ -51,7 +48,7 @@ async def score_consultation(request: ScoreRequest, db: Session = Depends(load))
             overall_score=scores["overall_score"],
             feedback=scores["feedback"],
             domain_scores=scores["scores"],
-            audio_recording=None,  # Will be updated later if recording exists
+            audio_recording=None, 
             duration_seconds=None
         )
         
@@ -59,7 +56,6 @@ async def score_consultation(request: ScoreRequest, db: Session = Depends(load))
         db.commit()
         db.refresh(consultation)
         
-        # Return consultation ID along with scores so the frontend can attach the recording
         scores["consultation_id"] = consultation.id
         
         return scores

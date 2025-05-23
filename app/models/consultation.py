@@ -17,16 +17,13 @@ class Consultation(BaseModel, Base):
     transcript = Column(Text, nullable=False)
     overall_score = Column(Float, nullable=True)
     feedback = Column(Text, nullable=True)
-    is_shared = Column(Boolean, default=False, nullable=False)  # Whether this consultation is shared for peer review
+    is_shared = Column(Boolean, default=False, nullable=False)
     
-    # Store domain scores as JSON
     domain_scores = Column(JSON, nullable=True)
     
-    # Audio recording URL or data
     audio_recording = Column(Text, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
     
-    # Relationships
     user = relationship("User", back_populates="consultations")
     case = relationship("Case", back_populates="consultations")
     peer_comments = relationship("PeerComment", back_populates="consultation", cascade="all, delete-orphan")
@@ -45,7 +42,6 @@ class PeerComment(BaseModel, Base):
     user_id = Column(String(36), ForeignKey('users.id'), nullable=False)
     comment = Column(String(300), nullable=False)
     
-    # Relationships
     consultation = relationship("Consultation", back_populates="peer_comments")
     user = relationship("User")
     
