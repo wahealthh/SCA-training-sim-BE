@@ -8,7 +8,7 @@ from app.models.user import User
 from app.services.consultation import generate_case, score_consultation
 from app.db.load import load
 from app.models.case import Case, ICE, BackgroundDetail, InformationDivulged, DoctorInfo
-from app.schema.case import CreateCaseRequest, CaseResponse
+from app.schema.case import CreateCaseRequest, CaseDetails
 from app.core.config import settings
 from loguru import logger
 
@@ -66,7 +66,7 @@ async def generate_case(db: Session = Depends(load)):
         )
 
 
-@router.post("/create_case", status_code=status.HTTP_201_CREATED, response_model=CaseResponse)  
+@router.post("/create_case", status_code=status.HTTP_201_CREATED, response_model=CaseDetails)  
 async def create_case(request: CreateCaseRequest, db: Session = Depends(load)):
     """Create a new patient case with ICE entries, background details, and information divulged"""
     try:
@@ -163,7 +163,7 @@ async def get_cases(db: Session = Depends(load)):
         )
 
 
-@router.get("/{case_id}", status_code=status.HTTP_200_OK, response_model=CaseResponse)
+@router.get("/{case_id}", status_code=status.HTTP_200_OK, response_model=CaseDetails)
 async def get_case(case_id: str, db: Session = Depends(load)):
     """Get a specific patient case by ID with all related data"""
     try:

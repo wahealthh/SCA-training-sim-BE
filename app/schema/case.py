@@ -50,9 +50,7 @@ class CreateCaseRequest(BaseModel):
 class ICEResponse(ICECreate):
     id: str
     case_id: str
-    created_at: datetime
-    updated_at: datetime
-
+   
     class Config:
         orm_mode = True
 
@@ -87,7 +85,7 @@ class DoctorInfoResponse(DoctorInfoCreate):
         orm_mode = True
 
 
-class CaseResponse(BaseModel):
+class CaseDetails(BaseModel):
     id: str
     case_number: str
     patient_name: Optional[str] = None
@@ -103,9 +101,3 @@ class CaseResponse(BaseModel):
         orm_mode = True
 
 
-class CaseDetails(BaseModel):
-    case_number: str
-    patient_name: Optional[str] = None
-    patient_age: Optional[int] = None
-    presenting_complaint: str
-    notes: Optional[str] = None

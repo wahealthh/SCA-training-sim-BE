@@ -66,11 +66,14 @@ def score_consultation(transcript, case_details):
     prompt = f"""
 You are an expert medical consultant evaluator who specializes in assessing GP trainee consultations.
 You will be scoring a consultation based on the Royal College of General Practitioners (RCGP) assessment framework.
+You will be analyzing what aspects of the case were properly explored.
 
-Here is the case that the GP trainee was presented with:
-Age: {case_details.patient_age}
-Presenting Complaint: {case_details.presenting_complaint}
-Context: {case_details.notes}
+
+Here is the case details that the GP trainee was presented with:
+{case_details.doctor_info}
+
+Here is the full case details:
+{case_details}
 
 Here is the transcript of the consultation:
 {transcript}
@@ -112,7 +115,35 @@ Respond with a JSON object in this format:
     }}
   }},
   "overall_score": float,
-  "feedback": "Concise feedback paragraph here"
+  "feedback": "Concise feedback paragraph here",
+  "coverage_analysis": {{
+    "ice_coverage": [
+      {{
+        "id": "ice_id",
+        "ice_type": "IDEA/CONCERN/EXPECTATION",
+        "description": "description text",
+        "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
+        "evidence": "Quote from transcript or explanation"
+      }}
+    ],
+    "information_coverage": [
+      {{
+        "id": "info_id",
+        "divulgence_type": "FREELY_DIVULGED/SPECIFICALLY_ASKED",
+        "description": "description text",
+        "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
+        "evidence": "Quote from transcript or explanation"
+      }}
+    ],
+    "background_coverage": [
+      {{
+        "id": "background_id",
+        "description": "description text",
+        "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
+        "evidence": "Quote from transcript or explanation"
+      }}
+    ]
+  }}
 }}
 """
 

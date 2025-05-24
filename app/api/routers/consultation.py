@@ -48,6 +48,7 @@ async def score_consultation_route(request: ScoreRequest, db: Session = Depends(
             overall_score=scores["overall_score"],
             feedback=scores["feedback"],
             domain_scores=scores["scores"],
+            coverage_analysis=scores["coverage_analysis"],
             audio_recording=None, 
             duration_seconds=None
         )

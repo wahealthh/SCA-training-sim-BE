@@ -18,8 +18,9 @@ class Consultation(BaseModel, Base):
     overall_score = Column(Float, nullable=True)
     feedback = Column(Text, nullable=True)
     is_shared = Column(Boolean, default=False, nullable=False)
-    
+    coverage_analysis = Column(JSON, nullable=True)
     domain_scores = Column(JSON, nullable=True)
+
     
     audio_recording = Column(Text, nullable=True)
     duration_seconds = Column(Integer, nullable=True)
