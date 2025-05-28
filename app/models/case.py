@@ -17,6 +17,12 @@ class DivulgenceType(str, enum.Enum):
     SPECIFICALLY_ASKED = "SPECIFICALLY_ASKED"
 
 
+class Gender(str, enum.Enum):
+    MALE = "MALE"
+    FEMALE = "FEMALE"
+    OTHER = "OTHER"
+
+
 class Case(BaseModel, Base):
     """
     Case model for patient scenarios
@@ -26,6 +32,7 @@ class Case(BaseModel, Base):
     case_number = Column(String(50), nullable=False, unique=True, index=True)
     patient_name = Column(String(255), nullable=True)
     patient_age = Column(Integer, nullable=True)
+    patient_gender = Column(SQLAlchemyEnum(Gender), nullable=True)
     presenting_complaint = Column(Text, nullable=False)
     notes = Column(Text, nullable=True)
     
