@@ -17,6 +17,7 @@ from app.core.logging_config import setup_logging
 from app.db.load import load
 from app.models.user import User
 from app.models.consultation import Consultation, Case, ICE, BackgroundDetail, InformationDivulged, ICEType, DivulgenceType, DoctorInfo
+from app.models.case import Gender
 
 # Set up logging
 logger = setup_logging()
@@ -52,6 +53,7 @@ def create_test_cases(db: Session):
             case_number="CASE-001",
             patient_name="John Smith",
             patient_age=45,
+            patient_gender=Gender.MALE,
             presenting_complaint="The patient has been experiencing increasing shortness of breath over the past month, particularly when climbing stairs.",
             notes="Patient has a history of smoking 20 cigarettes daily for 25 years. No prior respiratory conditions diagnosed. Family history of COPD."
         ),
@@ -59,6 +61,7 @@ def create_test_cases(db: Session):
             case_number="CASE-002",
             patient_name="Sarah Johnson",
             patient_age=62,
+            patient_gender=Gender.FEMALE,
             presenting_complaint="The patient reports persistent joint pain in both knees that has been worsening over the past year.",
             notes="Patient is overweight with a BMI of 32. Previously active but has reduced exercise due to pain. Has been self-medicating with over-the-counter pain relievers."
         ),
@@ -66,6 +69,7 @@ def create_test_cases(db: Session):
             case_number="CASE-003",
             patient_name="Michael Chen",
             patient_age=36,
+            patient_gender=Gender.MALE,
             presenting_complaint="The patient has been experiencing recurring headaches, typically in the afternoon, for the past three weeks.",
             notes="Works long hours at a computer. Reports increased stress at work. No prior history of chronic headaches. Vision was last checked two years ago."
         ),
@@ -73,6 +77,7 @@ def create_test_cases(db: Session):
             case_number="CASE-004",
             patient_name="Emily Rodriguez",
             patient_age=58,
+            patient_gender=Gender.FEMALE,
             presenting_complaint="The patient has noticed a gradually enlarging lump on the left side of their neck over the past two months.",
             notes="Non-smoker. No recent infections. No fever or night sweats. Previously healthy with well-controlled hypertension."
         ),
@@ -80,6 +85,7 @@ def create_test_cases(db: Session):
             case_number="CASE-005",
             patient_name="David Kim",
             patient_age=29,
+            patient_gender=Gender.MALE,
             presenting_complaint="The patient reports severe abdominal pain that started suddenly four hours ago.",
             notes="No previous abdominal surgeries. Last meal was 6 hours ago. Pain is concentrated in the right lower quadrant. No nausea or vomiting."
         ),

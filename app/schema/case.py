@@ -3,7 +3,7 @@ from typing import Optional, List
 from datetime import datetime
 from enum import Enum
 
-from app.models.case import ICEType, DivulgenceType
+from app.models.case import ICEType, DivulgenceType, Gender
 
 
 # Input models for creating entries
@@ -34,6 +34,7 @@ class CreateCaseRequest(BaseModel):
     case_number: str
     patient_name: Optional[str] = None
     patient_age: Optional[int] = None
+    patient_gender: Optional[Gender] = None
     presenting_complaint: str
     notes: Optional[str] = None
     ice_entries: List[ICECreate] = []
@@ -90,6 +91,7 @@ class CaseDetails(BaseModel):
     case_number: str
     patient_name: Optional[str] = None
     patient_age: Optional[int] = None
+    patient_gender: Optional[Gender] = None
     presenting_complaint: str
     notes: Optional[str] = None
     ice_entries: List[ICEResponse] = []

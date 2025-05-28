@@ -33,6 +33,7 @@ async def generate_case(db: Session = Depends(load)):
             case_number=case_data["name"],
             patient_name=case_data["name"],
             patient_age=case_data["age"],
+            patient_gender=None,  # Will be set based on generated case data in the future
             presenting_complaint=case_data["presenting"],
             notes=case_data["context"]
         )
@@ -75,6 +76,7 @@ async def create_case(request: CreateCaseRequest, db: Session = Depends(load)):
             case_number=request.case_number,
             patient_name=request.patient_name,
             patient_age=request.patient_age,
+            patient_gender=request.patient_gender,
             presenting_complaint=request.presenting_complaint,
             notes=request.notes
         )
@@ -146,6 +148,7 @@ async def get_cases(db: Session = Depends(load)):
                 "case_number": case.case_number,
                 "patient_name": case.patient_name,
                 "patient_age": case.patient_age,
+                "patient_gender": case.patient_gender.value if case.patient_gender else None,
                 "presenting_complaint": case.presenting_complaint,
                 "notes": case.notes,
                 "created_at": case.created_at.isoformat(),
