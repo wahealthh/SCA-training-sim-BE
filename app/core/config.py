@@ -5,9 +5,9 @@ from typing import List, Optional
 
 class Settings(BaseSettings):
     # Project info
-    PROJECT_NAME: str = "SCA Training Simulator Backend"
+    PROJECT_NAME: str = "SimPrep AI"
     VERSION: str = "0.1.0"
-    DESCRIPTION: str = "Backend API for SCA Training Simulator"
+    DESCRIPTION: str = "Backend API for SimPrep AI"
     
     # API configuration
     API_V1_STR: str = "/api/v1"
