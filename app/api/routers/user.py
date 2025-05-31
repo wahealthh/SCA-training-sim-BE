@@ -3,6 +3,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from sqlalchemy.orm import Session
 import httpx
+from loguru import logger
 
 from app.core.config import settings
 from app.db.load import load
@@ -29,16 +30,15 @@ async def register(
     Returns:
     - Dict containing user details and registration status
     """
-    auth_payload = {
-        "name": f"{request.first_name} {request.last_name}",
-        "email": request.email,
-        "password1": request.password1.get_secret_value(),
-        "password2": request.password2.get_secret_value(),
-        "app_name": settings.PROJECT_NAME,
-        "role": "user",
-    }
-
-    try:
+    try:        
+        auth_payload = {
+            "name": f"{request.first_name} {request.last_name}",
+            "email": request.email,
+            "password1": request.password1.get_secret_value(),
+            "password2": request.password2.get_secret_value(),
+            "app_name": settings.PROJECT_NAME,
+            "role": "user",
+        }
         async with httpx.AsyncClient() as client:
             auth_response = await client.post(
                 f"{settings.AUTH_SERVICE_URL}{settings.AUTH_REGISTER_URL}", json=auth_payload
@@ -46,25 +46,38 @@ async def register(
             auth_response.raise_for_status()
             auth_data = auth_response.json()
             user_id = auth_data["id"]
-            
+                        
             # Forward the cookie from auth service if it exists
             if "set-cookie" in auth_response.headers:
                 response.headers["set-cookie"] = auth_response.headers["set-cookie"]
     except httpx.HTTPError as e:
+        logger.error(f"Auth service error: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            logger.error(f"Auth service response status: {e.response.status_code}")
+            logger.error(f"Auth service response content: {e.response.text}")
         raise HTTPException(
-            status_code=e.response.status_code if hasattr(e, "response") else 500,
-            detail=e.response.json() if hasattr(e, "response") else str(e),
+            status_code=e.response.status_code if hasattr(e, "response") and e.response else 500,
+            detail=e.response.json() if hasattr(e, "response") and e.response else str(e),
+        )
+    except Exception as e:
+        logger.exception(f"Unexpected error during auth service registration: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Auth service error: {str(e)}",
         )
 
-    new_user = User(
-        id=user_id,
-        first_name=request.first_name,
-        last_name=request.last_name,
-    )
+    try:        
+        new_user = User(
+            id=user_id,
+            first_name=request.first_name,
+            last_name=request.last_name,
+        )
 
-    try:
         db.add(new_user)
+        db.commit()
+        
     except Exception as e:
+        logger.exception(f"Database error during user creation: {e}")
         # If local user creation fails, we should ideally delete the auth user
         # This would require an additional endpoint in the auth service
         raise HTTPException(
