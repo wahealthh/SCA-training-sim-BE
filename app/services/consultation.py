@@ -62,18 +62,81 @@ def score_consultation(transcript, case_details):
     """
     scoring_rubric = load_scoring_rubric()
     
+    # Format case details into a clean, readable format
+    formatted_case_details = f"""
+**Patient Information:**
+- Name: {case_details.patient_name}
+- Age: {case_details.patient_age}
+- Gender: {case_details.patient_gender.value if case_details.patient_gender else 'Not specified'}
+- Case Number: {case_details.case_number}
+
+**Presenting Complaint:**
+{case_details.presenting_complaint}
+
+**Clinical Notes:**
+{case_details.notes if case_details.notes else 'None provided'}
+"""
+
+    # Add Doctor Information if available
+    if case_details.doctor_info:
+        formatted_case_details += f"""
+**Doctor Information:**
+- Name: {case_details.doctor_info.name}
+- Age: {case_details.doctor_info.age}
+- Past Medical History: {case_details.doctor_info.past_medical_history}
+- Current Medication: {case_details.doctor_info.current_medication}
+- Context: {case_details.doctor_info.context}
+"""
+
+    # Format ICE entries
+    if case_details.ice_entries:
+        formatted_case_details += "\n**Patient's Ideas, Concerns, and Expectations (ICE):**\n"
+        for ice in case_details.ice_entries:
+            ice_type = ice.ice_type.value if hasattr(ice.ice_type, 'value') else str(ice.ice_type)
+            formatted_case_details += f"- {ice_type}: {ice.description}\n"
+    
+    # Format background details
+    if case_details.background_details:
+        formatted_case_details += "\n**Background Information:**\n"
+        for detail in case_details.background_details:
+            formatted_case_details += f"- {detail.detail}\n"
+    
+    # Format information divulged
+    if case_details.information_divulged:
+        formatted_case_details += "\n**Information to be Divulged:**\n"
+        
+        # Group by divulgence type
+        freely_divulged = [info for info in case_details.information_divulged 
+                          if info.divulgence_type.value == 'FREELY_DIVULGED']
+        specifically_asked = [info for info in case_details.information_divulged 
+                            if info.divulgence_type.value == 'SPECIFICALLY_ASKED']
+        
+        if freely_divulged:
+            formatted_case_details += "\n*Information the patient will freely share:*\n"
+            for info in freely_divulged:
+                formatted_case_details += f"- {info.description}\n"
+        
+        if specifically_asked:
+            formatted_case_details += "\n*Information the patient will only share if specifically asked:*\n"
+            for info in specifically_asked:
+                formatted_case_details += f"- {info.description}\n"
+    
     # Create a prompt for scoring
     prompt = f"""
 You are an expert medical consultant evaluator who specializes in assessing GP trainee consultations.
 You will be scoring a consultation based on the Royal College of General Practitioners (RCGP) assessment framework.
-You will be analyzing what aspects of the case were properly explored.
+You will also analyze and report on which specific informational aspects of the case were covered during the consultation in a dedicated 'coverage_analysis' section.
 
+**Crucial Guidance for Scoring vs. Coverage Analysis:**
+It is essential to differentiate between the assessment of the trainee's skills (reflected in the scores for Data Gathering, Clinical Management, and Interpersonal Skills) and the factual coverage of case information (detailed in 'coverage_analysis').
 
-Here is the case details that the GP trainee was presented with:
-{case_details.doctor_info}
+1.  **Domain Scoring (Data Gathering, Clinical Management, Interpersonal Skills):** These scores (1-5) must be based on the *quality, depth, appropriateness, and proficiency* of the trainee's actions, clinical reasoning, and communication, as defined by the RCGP assessment framework provided below. For example, how effectively did they gather information, not just *what* information they gathered? How sound was their clinical judgment and management plan? How effectively did they communicate and build rapport?
+2.  **Coverage Analysis:** This section is intended to objectively list which predefined elements of the case (ICE, specific information, background) were mentioned or explored.
 
-Here is the full case details:
-{case_details}
+**Important:** A high degree of coverage in the 'coverage_analysis' section **does not automatically equate to high scores in the primary domains.** A trainee might mention all required information points but do so with poor technique, flawed reasoning, or inadequate interpersonal skills. Conversely, a trainee might demonstrate excellent skills in the areas they explored, even if they missed a minor informational point. Your domain scoring should reflect the *skill and competency* demonstrated, using the RCGP rubric as your primary guide.
+
+Here are the case details that were provided to the GP trainee:
+{formatted_case_details}
 
 Here is the transcript of the consultation:
 {transcript}
@@ -94,6 +157,8 @@ For each domain, provide:
 
 Then calculate an overall score (average of the three domains).
 Finally, provide concise, actionable feedback for the trainee.
+
+For the coverage analysis, identify which ICE entries, background details, and information points were covered, partially covered, or not covered in the consultation. Include evidence from the transcript to support your assessment.
 
 Respond with a JSON object in this format:
 {{
@@ -119,7 +184,6 @@ Respond with a JSON object in this format:
   "coverage_analysis": {{
     "ice_coverage": [
       {{
-        "id": "ice_id",
         "ice_type": "IDEA/CONCERN/EXPECTATION",
         "description": "description text",
         "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
@@ -128,7 +192,6 @@ Respond with a JSON object in this format:
     ],
     "information_coverage": [
       {{
-        "id": "info_id",
         "divulgence_type": "FREELY_DIVULGED/SPECIFICALLY_ASKED",
         "description": "description text",
         "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
@@ -137,7 +200,6 @@ Respond with a JSON object in this format:
     ],
     "background_coverage": [
       {{
-        "id": "background_id",
         "description": "description text",
         "coverage_status": "COVERED/PARTIALLY_COVERED/NOT_COVERED",
         "evidence": "Quote from transcript or explanation"
@@ -147,9 +209,9 @@ Respond with a JSON object in this format:
 }}
 """
 
-    # Call OpenAI API to score the consultation
+   
     response = openai.chat.completions.create(
-        model="gpt-4o",
+        model="gpt-4.1",
         messages=[
             {"role": "system", "content": "You are a medical consultation scoring assistant."},
             {"role": "user", "content": prompt}
