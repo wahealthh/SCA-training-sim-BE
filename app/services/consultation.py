@@ -91,15 +91,15 @@ def score_consultation(transcript, case_details):
     # Format ICE entries
     if case_details.ice_entries:
         formatted_case_details += "\n**Patient's Ideas, Concerns, and Expectations (ICE):**\n"
-        for ice in case_details.ice_entries:
+        for i, ice in enumerate(case_details.ice_entries, 1):
             ice_type = ice.ice_type.value if hasattr(ice.ice_type, 'value') else str(ice.ice_type)
-            formatted_case_details += f"- {ice_type}: {ice.description}\n"
+            formatted_case_details += f"{i}. {ice_type}: {ice.description}\n"
     
     # Format background details
     if case_details.background_details:
         formatted_case_details += "\n**Background Information:**\n"
-        for detail in case_details.background_details:
-            formatted_case_details += f"- {detail.detail}\n"
+        for i, detail in enumerate(case_details.background_details, 1):
+            formatted_case_details += f"{i}. {detail.detail}\n"
     
     # Format information divulged
     if case_details.information_divulged:
@@ -113,13 +113,13 @@ def score_consultation(transcript, case_details):
         
         if freely_divulged:
             formatted_case_details += "\n*Information the patient will freely share:*\n"
-            for info in freely_divulged:
-                formatted_case_details += f"- {info.description}\n"
+            for i, info in enumerate(freely_divulged, 1):
+                formatted_case_details += f"{i}. {info.description}\n"
         
         if specifically_asked:
             formatted_case_details += "\n*Information the patient will only share if specifically asked:*\n"
-            for info in specifically_asked:
-                formatted_case_details += f"- {info.description}\n"
+            for i, info in enumerate(specifically_asked, 1):
+                formatted_case_details += f"{i}. {info.description}\n"
     
     # Create a prompt for scoring
     prompt = f"""
@@ -131,7 +131,7 @@ You will also analyze and report on which specific informational aspects of the 
 It is essential to differentiate between the assessment of the trainee's skills (reflected in the scores for Data Gathering, Clinical Management, and Interpersonal Skills) and the factual coverage of case information (detailed in 'coverage_analysis').
 
 1.  **Domain Scoring (Data Gathering, Clinical Management, Interpersonal Skills):** These scores (1-5) must be based on the *quality, depth, appropriateness, and proficiency* of the trainee's actions, clinical reasoning, and communication, as defined by the RCGP assessment framework provided below. For example, how effectively did they gather information, not just *what* information they gathered? How sound was their clinical judgment and management plan? How effectively did they communicate and build rapport?
-2.  **Coverage Analysis:** This section is intended to objectively list which predefined elements of the case (ICE, specific information, background) were mentioned or explored.
+2.  **Coverage Analysis:** This section is intended to objectively list which predefined elements of the case (ICE, specific information, background) were mentioned or explored. You don't need to rephrase or summarize the information, just list it as it is.
 
 **Important:** A high degree of coverage in the 'coverage_analysis' section **does not automatically equate to high scores in the primary domains.** A trainee might mention all required information points but do so with poor technique, flawed reasoning, or inadequate interpersonal skills. Conversely, a trainee might demonstrate excellent skills in the areas they explored, even if they missed a minor informational point. Your domain scoring should reflect the *skill and competency* demonstrated, using the RCGP rubric as your primary guide.
 
@@ -209,7 +209,7 @@ Respond with a JSON object in this format:
 }}
 """
 
-   
+    print("prompt", prompt)
     response = openai.chat.completions.create(
         model="gpt-4.1",
         messages=[
