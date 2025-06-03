@@ -14,3 +14,9 @@ class CreateUser(BaseModel):
     class Config:
         from_attributes = True
 
+
+class OAuthUserCreate(BaseModel):
+    """Schema for OAuth user creation (called by auth service)"""
+    id: str  
+    first_name: str
+    last_name: str

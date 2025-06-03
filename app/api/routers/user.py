@@ -8,9 +8,10 @@ from loguru import logger
 from app.core.config import settings
 from app.db.load import load
 from app.models.user import User
-from app.schema.user import CreateUser
+from app.schema.user import CreateUser, OAuthUserCreate
 
 router = APIRouter(prefix="/users", tags=["users"])
+
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 async def register(
@@ -94,3 +95,64 @@ async def register(
         "access_token": auth_data["access_token"],
         "token_type": "bearer",
     }
+
+@router.post("/oauth-register", status_code=status.HTTP_201_CREATED)
+async def oauth_register(
+    request: OAuthUserCreate,
+    db: Session = Depends(load),
+):
+    """
+    Create user record after successful OAuth authentication.
+    This endpoint is called by the auth service after OAuth success.
+
+    Parameters:
+    - request (OAuthUserCreate): User details from OAuth provider
+    - db (Session): Database session
+
+    Returns:
+    - Dict containing user creation status
+    """
+    try:
+        
+        # Check if user already exists
+        existing_user = db.query(User).filter_by(id=request.id).first()
+        if existing_user:
+            logger.info(f"User {request.id} already exists, updating details")
+            # Update existing user details if needed
+            existing_user.first_name = request.first_name
+            existing_user.last_name = request.last_name
+            db.commit()
+            
+            return {
+                "id": existing_user.id,
+                "first_name": existing_user.first_name,
+                "last_name": existing_user.last_name,
+                "message": "User updated successfully",
+                "is_new_user": False
+            }
+        
+        # Create new user
+        new_user = User(
+            id=request.id,
+            first_name=request.first_name,
+            last_name=request.last_name,
+        )
+
+        db.add(new_user)
+        db.commit()
+        logger.info(f"Successfully created OAuth user {request.id}")
+        
+        return {
+            "id": new_user.id,
+            "first_name": new_user.first_name,
+            "last_name": new_user.last_name,
+            "message": "OAuth user created successfully",
+            "is_new_user": True
+        }
+        
+    except Exception as e:
+        logger.exception(f"Database error during OAuth user creation: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to create OAuth user record: {str(e)}",
+        )
