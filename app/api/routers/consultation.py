@@ -65,7 +65,7 @@ async def score_consultation_route(request: ScoreRequest, db: Session = Depends(
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
 
 
-@router.get("/history", status_code=status.HTTP_200_OK)
+@router.get("/history/{user_id}", status_code=status.HTTP_200_OK)
 async def get_history(user_id: str, db: Session = Depends(load)):
     """Get history of consultation scores for a specific user"""
     try:
