@@ -66,11 +66,12 @@ async def score_consultation_route(request: ScoreRequest, db: Session = Depends(
 
 
 @router.get("/history", status_code=status.HTTP_200_OK)
-async def get_history(db: Session = Depends(load)):
-    """Get history of consultation scores"""
+async def get_history(user_id: str, db: Session = Depends(load)):
+    """Get history of consultation scores for a specific user"""
     try:
-        # Query all consultations with their associated cases
-        consultations = db.query(Consultation).join(
+        consultations = db.query(Consultation).filter(
+            Consultation.user_id == user_id
+        ).join(
             Case
         ).order_by(Consultation.created_at.desc()).all()
         
